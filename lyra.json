@@ -1,0 +1,10 @@
+{
+    "Name": "test",
+    "Group": "",
+    "Java": "",
+    "Repos": [
+        "https://repo.maven.apache.org/maven2/",
+        "https://maven.mrnavastar.me/"
+    ],
+    "Artifacts": null
+}

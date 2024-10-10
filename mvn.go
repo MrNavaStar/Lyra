@@ -93,8 +93,6 @@ func (a Artifact) LatestVersion(repos []string) (string, error) {
 		resp, err := http.Get(metadataUrl)
 		if err != nil {
 			return "", err
-		} else if resp.StatusCode != http.StatusOK {
-			return "", fmt.Errorf("unable to fetch maven metadata from %s Http statusCode: %d", metadataUrl, resp.StatusCode)
 		}
 		defer resp.Body.Close()
 
@@ -112,8 +110,6 @@ func (a Artifact) LatestSnapshotVersion(repo string) (string, error) {
 	resp, err := http.Get(metadataUrl)
 	if err != nil {
 		return "", err
-	} else if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("unable to fetch maven metadata from %s Http statusCode: %d", metadataUrl, resp.StatusCode)
 	}
 	defer resp.Body.Close()
 

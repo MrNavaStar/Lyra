@@ -6,7 +6,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/mrnavastar/assist/ops"
 	"github.com/urfave/cli/v2"
 )
 
@@ -28,38 +27,6 @@ func init_project(ctx *cli.Context) error {
 	return mod.Save()
 }
 
-func get(ctx *cli.Context) error {
-	mod := ctx.Context.Value(modKey).(Module)
-	if ops.IsEmpty(mod) {
-		return errors.New("no project found in current directory")
-	}
-
-	if ctx.Args().Len() == 0 {
-		return errors.New("no maven artifact provided")
-	}
-
-	artifact, err := ParseArtifact(ctx.Args().First())
-	if err != nil {
-		return err
-	}
-
-	if artifact.Version == "" {
-		artifact.Version, err = artifact.LatestVersion(mod.Repos)
-		if err != nil {
-			return err
-		}
-	}
-
-	for _, a := range mod.Artifacts {
-		if a.Equals(artifact) {
-			return mod.Save()
-		}
-	}
-
-	mod.Artifacts = append(mod.Artifacts, artifact)
-	return mod.Save()
-}
-
 func main() {
 	var mod Module
 	err := mod.Load()
@@ -76,11 +43,23 @@ func main() {
 			},
 			{
 				Name: "get",
-				Action: get,
+				Action: Get,
 			},
 			{
 				Name: "build",
 				Action: Build,
+			},
+			{
+				Name: "repo",
+				Action: AddRepo,
+				Subcommands: []*cli.Command{
+					{
+						Name: "remove",
+					},
+					{
+						Name: "list",
+					},
+				},
 			},
 		},
     }
