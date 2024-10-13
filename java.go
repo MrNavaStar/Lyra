@@ -59,8 +59,8 @@ func Build(ctx *cli.Context) error {
 func Package(mod Module) error {
 	c, group := babe.CreateJar(mod.Name + ".jar")
 
+	// Package class files
 	var mainClass string
-
 	err := filepath.WalkDir("build/output/", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
@@ -84,6 +84,24 @@ func Package(mod Module) error {
 			}
 			mainClass = class.GetClassName()
 		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	// Package resources
+	err = filepath.WalkDir("src/main/resources/", func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		c <- &babe.JarMember{Name: strings.TrimPrefix(path, "src/main/resources/"), Buffer: &bytes.Buffer{Data: &data, Index: 0}}
 		return nil
 	})
 	if err != nil {
