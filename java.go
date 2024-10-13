@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -12,6 +13,7 @@ import (
 	"github.com/mrnavastar/assist/bytes"
 	"github.com/mrnavastar/babe/babe"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/sync/errgroup"
 )
 
 const manifest = "Manifest-Version: 1.0\nMain-Class: %s\n";
@@ -59,42 +61,46 @@ func Package(mod Module) error {
 
 	var mainClass string
 
+	walkGroup, _ := errgroup.WithContext(context.Background())
+
 	err := filepath.WalkDir("build/output/", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-
-		member := babe.JarMember{Name: strings.TrimPrefix(path, "build/output/"), Buffer: &bytes.Buffer{Data: &data, Index: 0}}
-		c <- &member
-		class, err := member.GetAsClass()
-		if err != nil {
-			return err
-		}
-
-		if class.HasMainMethod() {
-			if mainClass != "" {
-				return errors.New("jar has too many main method declarations - only one allowed")
+		walkGroup.Go(func() error {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
 			}
-			mainClass = class.GetClassName()
-		}
+
+			member := babe.JarMember{Name: strings.TrimPrefix(path, "build/output/"), Buffer: &bytes.Buffer{Data: &data, Index: 0}}
+			c <- &member
+			class, err := member.GetAsClass()
+			if err != nil {
+				return err
+			}
+
+			if class.HasMainMethod() {
+				if mainClass != "" {
+					return errors.New("jar has too many main method declarations - only one allowed")
+				}
+				manifestBytes := []byte(fmt.Sprintf(manifest, strings.ReplaceAll(mainClass, "/", ".")))
+				c <- &babe.JarMember{Name: "META-INF/MANIFEST.MF", Buffer: &bytes.Buffer{Data: &manifestBytes, Index: 0}}
+			}
+			return nil
+
+		})
 		return nil
 	})
 	if err != nil {
 		return err
 	}
 
-	manifestBytes := []byte(fmt.Sprintf(manifest, strings.ReplaceAll(mainClass, "/", ".")))
-	c <- &babe.JarMember{Name: "META-INF/MANIFEST.MF", Buffer: &bytes.Buffer{Data: &manifestBytes, Index: 0}}
-	close(c)
-
-	if err := group.Wait(); err != nil {
+	if err := walkGroup.Wait(); err != nil {
 		return err
 	}
+	close(c)
 
-	return nil 
+	return group.Wait()
 }
