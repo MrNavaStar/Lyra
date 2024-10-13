@@ -2,9 +2,17 @@ github.com/cpuguy83/go-md2man/v2 v2.0.4 h1:wfIWP927BUkWJb2NmU/kNDYIBTh/ziUX91+lV
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/mrnavastar/assist v0.0.0-20240803033536-ec08a1a841c6 h1:BkfaynP54yilZXNK2cQw66xPDgGmWUD4JJDCcFYD0c8=
 github.com/mrnavastar/assist v0.0.0-20240803033536-ec08a1a841c6/go.mod h1:g7rvIBEUXmx/fU1fwrgUiIMzE5xc/7avDoqf3jWFqSY=
+github.com/mrnavastar/babe v0.0.0-20241011182631-ddb289537ff0 h1:pWECcKpcbG3l57/M+Zvnp3ygrnSjO7EE7bSS8eQecHY=
+github.com/mrnavastar/babe v0.0.0-20241011182631-ddb289537ff0/go.mod h1:YWGhszTbz2arcT7NZV37GtfQReGp3d5R0ZNZN11dn/A=
+github.com/mrnavastar/babe v0.0.0-20241013003136-b7078ae763d1 h1:1KKE6Oy9rfuf5D2aIkUFrMYX6bopWktFBKUjCllzZFk=
+github.com/mrnavastar/babe v0.0.0-20241013003136-b7078ae763d1/go.mod h1:YWGhszTbz2arcT7NZV37GtfQReGp3d5R0ZNZN11dn/A=
+github.com/mrnavastar/babe v0.0.0-20241013003842-75ffcbeefddb h1:dygLM/vq0Fqp8JSz+DpZtD3L3iwBP86e24/GtOBzJOE=
+github.com/mrnavastar/babe v0.0.0-20241013003842-75ffcbeefddb/go.mod h1:YWGhszTbz2arcT7NZV37GtfQReGp3d5R0ZNZN11dn/A=
 github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf35Ld67mk=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/urfave/cli/v2 v2.27.4 h1:o1owoI+02Eb+K107p27wEX9Bb8eqIoZCfLXloLUSWJ8=
 github.com/urfave/cli/v2 v2.27.4/go.mod h1:m4QzxcD2qpra4z7WhzEGn74WZLViBnMpb1ToCAKdGRQ=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 h1:gEOO8jv9F4OT7lGCjxCBTO/36wtF6j2nSip77qHd4x4=
 github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1/go.mod h1:Ohn+xnUBiLI6FVj/9LpzZWtj1/D6lUovWYBkxHVV3aM=
+golang.org/x/sync v0.7.0 h1:YsImfSBoP9QPYL0xyKJPq0gcaJdG3rInoqxTWbfQu9M=
+golang.org/x/sync v0.7.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
