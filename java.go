@@ -39,6 +39,10 @@ func Build(ctx *cli.Context) error {
 		return nil
 	})
 
+	if err := os.RemoveAll("build/output"); err != nil {
+		return err
+	}
+
 	cmd := exec.Command("javac", 
 		"-d", "build/output",
 		"-cp", strings.Join(cp, ";"),
@@ -46,11 +50,9 @@ func Build(ctx *cli.Context) error {
 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
+	if err := cmd.Run(); err != nil {
 		return err
 	}
-
 	return Package(mod)
 }
 
@@ -78,7 +80,7 @@ func Package(mod Module) error {
 
 		if class.HasMainMethod() {
 			if mainClass != "" {
-				return errors.New("jar has too many main method declarations - only one allowed")
+				return errors.New("project has too many main method declarations - only one allowed")
 			}
 			mainClass = class.GetClassName()
 		}

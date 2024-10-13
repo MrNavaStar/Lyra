@@ -89,7 +89,7 @@ func (a Artifact) ArtifactUrl(repo string) (string, error) {
 
 func (a Artifact) LatestVersion(repos []string) (string, error) {
 	for _, repo := range repos {	
-		metadataUrl := repo + a.GroupPath() + "maven-metadata.xml"
+		metadataUrl := repo + "/" + a.GroupPath() + "maven-metadata.xml"
 		resp, err := http.Get(metadataUrl)
 		if err != nil {
 			return "", err
@@ -133,15 +133,11 @@ func (a Artifact) GroupPath() string {
 	}
 }
 
-func (a Artifact) download(path string, repo string) (string, error) {
-	return path + "/" + a.ArtifactPath(), web.Download(path+"/"+a.GroupPath(), a.Filename(), repo)
-}
-
-func (a Artifact) TryDownload(path string, repos []string) (string, error) {
+func (a Artifact) Download(path string, repos []string) error {
 	for _, repo := range repos {
-		if file, err := a.download(path, repo); err == nil {
-			return file, nil
+		if err := web.Download(path+"/"+a.GroupPath(), a.Filename(), repo + "/" + a.ArtifactPath()); err == nil {
+			return nil
 		}
 	}
-	return "", fmt.Errorf("failed to download maven artifact: %s")
+	return errors.New("failed to download maven artifact")
 }

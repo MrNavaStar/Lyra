@@ -5,7 +5,9 @@ import (
 	"errors"
 	"log"
 	"os"
+	"strings"
 
+	"github.com/mrnavastar/assist/fs"
 	"github.com/urfave/cli/v2"
 )
 
@@ -16,11 +18,16 @@ func init_project(ctx *cli.Context) error {
 		return errors.New("no project name provided")
 	}
 
+	if fs.Exists("lyra.json") {
+		return nil
+	}
+
 	mod := ctx.Context.Value(modKey).(Module)
 	mod.Name = ctx.Args().First()
-	mod.Repos = append(mod.Repos, "https://repo.maven.apache.org/maven2/")
+	mod.GroupId = ctx.String("group")
+	mod.Repos = append(mod.Repos, "https://repo.maven.apache.org/maven2")
 
-	err := os.MkdirAll("src/main/java/" + mod.Name, os.ModePerm)
+	err := os.MkdirAll(strings.Join([]string{"src/main/java", strings.ReplaceAll(mod.GroupId, ".", "/"), mod.Name}, "/"), os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -40,6 +47,12 @@ func main() {
 			{
 				Name: "init",
 				Action: init_project,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "group",
+						Aliases: []string{"g"},
+					},
+				},
 			},
 			{
 				Name: "get",
@@ -48,6 +61,20 @@ func main() {
 			{
 				Name: "build",
 				Action: Build,
+				Flags: []cli.Flag{
+					&cli.StringFlag{
+						Name: "output",
+						Aliases: []string{"o"},
+					},
+					&cli.BoolFlag{
+						Name: "fat",
+						Aliases: []string{"f"},
+					},
+					&cli.BoolFlag{
+						Name: "minimize",
+						Aliases: []string{"m"},
+					},
+				},
 			},
 			{
 				Name: "repo",

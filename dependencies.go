@@ -52,9 +52,7 @@ func AddRepo(ctx *cli.Context) error {
 		repo = "https://" + repo
 	}
 
-	if !strings.HasSuffix(repo, "/") {
-		repo += "/"
-	}
+	repo = strings.TrimRight(repo, "/")
 
 	for _, r := range mod.Repos {
 		if r == repo {

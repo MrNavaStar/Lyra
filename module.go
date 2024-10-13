@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"strings"
 
 	"github.com/mrnavastar/assist/fs"
 )
@@ -11,7 +12,7 @@ var modKey Lyra
 
 type Module struct {
 	Name string
-	Group string
+	GroupId string
 	Java string
 	Repos []string
 	Artifacts []Artifact
@@ -44,8 +45,14 @@ func (m *Module) Save() error {
 }
 
 func (m Module) Sync() error {
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return err
+	}
+
+	path := strings.Join([]string{cache, "lyra", "libs"}, "/")
 	for _, artifact := range m.Artifacts {
-		_, err := artifact.TryDownload("build/libs", m.Repos)
+		err := artifact.Download(path, m.Repos)
 		if err != nil {
 			return err
 		}

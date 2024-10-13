@@ -1,11 +1,9 @@
 github.com/cpuguy83/go-md2man/v2 v2.0.4 h1:wfIWP927BUkWJb2NmU/kNDYIBTh/ziUX91+lVfRxZq4=
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
-github.com/mrnavastar/assist v0.0.0-20240803033536-ec08a1a841c6 h1:BkfaynP54yilZXNK2cQw66xPDgGmWUD4JJDCcFYD0c8=
-github.com/mrnavastar/assist v0.0.0-20240803033536-ec08a1a841c6/go.mod h1:g7rvIBEUXmx/fU1fwrgUiIMzE5xc/7avDoqf3jWFqSY=
-github.com/mrnavastar/babe v0.0.0-20241011182631-ddb289537ff0 h1:pWECcKpcbG3l57/M+Zvnp3ygrnSjO7EE7bSS8eQecHY=
-github.com/mrnavastar/babe v0.0.0-20241011182631-ddb289537ff0/go.mod h1:YWGhszTbz2arcT7NZV37GtfQReGp3d5R0ZNZN11dn/A=
-github.com/mrnavastar/babe v0.0.0-20241013003136-b7078ae763d1 h1:1KKE6Oy9rfuf5D2aIkUFrMYX6bopWktFBKUjCllzZFk=
-github.com/mrnavastar/babe v0.0.0-20241013003136-b7078ae763d1/go.mod h1:YWGhszTbz2arcT7NZV37GtfQReGp3d5R0ZNZN11dn/A=
+github.com/mrnavastar/assist v0.0.0-20240622221548-0d5c64e8331b h1:kBvASJu04TBvYE+hpm1RoXy1KQYGHPj400yPdfJk7D4=
+github.com/mrnavastar/assist v0.0.0-20240622221548-0d5c64e8331b/go.mod h1:g7rvIBEUXmx/fU1fwrgUiIMzE5xc/7avDoqf3jWFqSY=
+github.com/mrnavastar/assist v0.0.0-20241013042508-9ac9d024bde2 h1:O+ENPOXFsp6R7MP7leQXrdIRAfqc8twi6KI+sj10cQc=
+github.com/mrnavastar/assist v0.0.0-20241013042508-9ac9d024bde2/go.mod h1:g7rvIBEUXmx/fU1fwrgUiIMzE5xc/7avDoqf3jWFqSY=
 github.com/mrnavastar/babe v0.0.0-20241013003842-75ffcbeefddb h1:dygLM/vq0Fqp8JSz+DpZtD3L3iwBP86e24/GtOBzJOE=
 github.com/mrnavastar/babe v0.0.0-20241013003842-75ffcbeefddb/go.mod h1:YWGhszTbz2arcT7NZV37GtfQReGp3d5R0ZNZN11dn/A=
 github.com/russross/blackfriday/v2 v2.1.0 h1:JIOH55/0cWyOuilr9/qlrm0BSXldqnqwMsf35Ld67mk=
