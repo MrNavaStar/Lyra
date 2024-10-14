@@ -74,13 +74,13 @@ func Package(mod Module) error {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
-		if err != nil {
+		var member babe.JarMember
+		if err := member.FromFile(path); err != nil {
 			return err
 		}
-
-		member := babe.JarMember{Name: strings.TrimPrefix(path, "build/output/"), Buffer: &bytes.Buffer{Data: &data, Index: 0}}
+		member.Name = strings.TrimPrefix(member.Name, "build/output/")
 		c <- &member
+
 		class, err := member.GetAsClass()
 		if err != nil {
 			return err
