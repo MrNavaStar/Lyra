@@ -12,6 +12,7 @@ import (
 	"github.com/mrnavastar/assist/bytes"
 	"github.com/mrnavastar/babe/babe"
 	"github.com/urfave/cli/v2"
+	fss "github.com/mrnavastar/assist/fs"
 )
 
 const manifest = "Manifest-Version: 1.0\nMain-Class: %s\n";
@@ -23,7 +24,7 @@ func Build(ctx *cli.Context) error {
 	// Create Classpath
 	var cp []string
 	for _, library := range mod.Libraries {
-		cp = append(cp, library.Path)
+		cp = append(cp, mod.Home + "/libs/" + library.Path)
 	}
 
 	// Create Sourcepath
@@ -45,7 +46,7 @@ func Build(ctx *cli.Context) error {
 
 	cmd := exec.Command("javac", 
 		"-d", "build/output",
-		"-cp", strings.Join(cp, ";"),
+		"-cp", strings.Join(cp, string(os.PathListSeparator)),
 		strings.Join(sp, " "))
 
 	cmd.Stdout = os.Stdout
@@ -97,22 +98,25 @@ func Package(mod Module) error {
 		return err
 	}
 
-	// Package resources
-	err = filepath.WalkDir("src/main/resources/", func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
 
-		data, err := os.ReadFile(path)
+	if fss.Exists("src/main/resources/") {
+		// Package resources
+		err = filepath.WalkDir("src/main/resources/", func(path string, d fs.DirEntry, err error) error {
+			if d.IsDir() {
+				return nil
+			}
+
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
+			c <- &babe.JarMember{Name: strings.TrimPrefix(path, "src/main/resources/"), Buffer: &bytes.Buffer{Data: &data, Index: 0}}
+			return nil
+		})
 		if err != nil {
 			return err
 		}
-
-		c <- &babe.JarMember{Name: strings.TrimPrefix(path, "src/main/resources/"), Buffer: &bytes.Buffer{Data: &data, Index: 0}}
-		return nil
-	})
-	if err != nil {
-		return err
 	}
 
 	manifestBytes := []byte(fmt.Sprintf(manifest, strings.ReplaceAll(mainClass, "/", ".")))
@@ -129,7 +133,7 @@ func Package(mod Module) error {
 func PackageSources(mod Module) error {
 	c, group := babe.CreateJar(mod.Name + "-sources.jar")
 
-	err := filepath.WalkDir("src/main/java", func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir("src/main/java/", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() || !strings.HasSuffix(path, ".java") {
 			return nil
 		}
@@ -138,11 +142,13 @@ func PackageSources(mod Module) error {
 		if err := member.FromFile(path); err != nil {
 			return err
 		}
+		member.Name = strings.TrimPrefix(member.Name, "src/main/java/")
 		c <- &member
 		return nil
 	})
 	if err != nil {
 		return err
 	}
+	close(c)
 	return group.Wait()
 }
