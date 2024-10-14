@@ -33,7 +33,7 @@ func Get(ctx *cli.Context) error {
 	}
 
     var library Library
-	library.Coordinate = ctx.Args().First()
+	library.Coordinate = artifact.Coordinate()
 	library.Path = artifact.ArtifactPath()
 
 	mod.Libraries = append(mod.Libraries, library)

@@ -52,8 +52,8 @@ func ParseArtifact(coordinate string) (Artifact, error) {
 	return artifact, fmt.Errorf("invalid package coordinate: %s Try groupId:artifactId:version", coordinate)
 }
 
-func (a Artifact) Equals(artifact Artifact) bool {
-	return a.GroupId == artifact.GroupId && a.Id == artifact.Id
+func (a Artifact) Coordinate() string {
+	return a.GroupId + ":" + a.Id + ":" + a.Version
 }
 
 func (a Artifact) Filename() string {
