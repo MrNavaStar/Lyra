@@ -11,7 +11,7 @@ platforms=(
 
 for platform in "${platforms[@]}"; do
   IFS="/" read -r GOOS GOARCH <<< "$platform"
-  output="bin/app-$GOOS-$GOARCH"
+  output="bin/lyra-$GOOS-$GOARCH"
   [[ "$GOOS" == "windows" ]] && output+=".exe"
 
   echo "Building for $GOOS/$GOARCH..."
