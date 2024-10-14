@@ -3,7 +3,7 @@ module github.com/mrnavastar/lyra2
 go 1.22.7
 
 require (
-	github.com/mrnavastar/assist v0.0.0-20241013042508-9ac9d024bde2
+	github.com/mrnavastar/assist v0.0.0-20241014041444-6b3009bf82f5
 	github.com/mrnavastar/babe v0.0.0-20241013051337-1ebec953ad5e
 	github.com/urfave/cli/v2 v2.27.4
 )

@@ -4,6 +4,8 @@ github.com/mrnavastar/assist v0.0.0-20240622221548-0d5c64e8331b h1:kBvASJu04TBvY
 github.com/mrnavastar/assist v0.0.0-20240622221548-0d5c64e8331b/go.mod h1:g7rvIBEUXmx/fU1fwrgUiIMzE5xc/7avDoqf3jWFqSY=
 github.com/mrnavastar/assist v0.0.0-20241013042508-9ac9d024bde2 h1:O+ENPOXFsp6R7MP7leQXrdIRAfqc8twi6KI+sj10cQc=
 github.com/mrnavastar/assist v0.0.0-20241013042508-9ac9d024bde2/go.mod h1:g7rvIBEUXmx/fU1fwrgUiIMzE5xc/7avDoqf3jWFqSY=
+github.com/mrnavastar/assist v0.0.0-20241014041444-6b3009bf82f5 h1:ib70q85wHgsXdtHyywU3evgw11IjrDugr7tS9wPiuDU=
+github.com/mrnavastar/assist v0.0.0-20241014041444-6b3009bf82f5/go.mod h1:g7rvIBEUXmx/fU1fwrgUiIMzE5xc/7avDoqf3jWFqSY=
 github.com/mrnavastar/babe v0.0.0-20241013003842-75ffcbeefddb h1:dygLM/vq0Fqp8JSz+DpZtD3L3iwBP86e24/GtOBzJOE=
 github.com/mrnavastar/babe v0.0.0-20241013003842-75ffcbeefddb/go.mod h1:YWGhszTbz2arcT7NZV37GtfQReGp3d5R0ZNZN11dn/A=
 github.com/mrnavastar/babe v0.0.0-20241013051337-1ebec953ad5e h1:cmmPoe29LEFGQuZC9lu1fV3Oxln2oyZ5vkxzTseAXmk=
