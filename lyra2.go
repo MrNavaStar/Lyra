@@ -22,13 +22,18 @@ func init_project(ctx *cli.Context) error {
 		return nil
 	}
 
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		return err
+	}
+
 	mod := ctx.Context.Value(modKey).(Module)
 	mod.Name = ctx.Args().First()
 	mod.GroupId = ctx.String("group")
+	mod.Home = cache + "/lyra"
 	mod.Repos = append(mod.Repos, "https://repo.maven.apache.org/maven2")
 
-	err := os.MkdirAll(strings.Join([]string{"src/main/java", strings.ReplaceAll(mod.GroupId, ".", "/"), mod.Name}, "/"), os.ModePerm)
-	if err != nil {
+	if err := os.MkdirAll(strings.Join([]string{"src/main/java", strings.ReplaceAll(mod.GroupId, ".", "/"), mod.Name}, "/"), os.ModePerm); err != nil {
 		return err
 	}
 	return mod.Save()
@@ -73,6 +78,14 @@ func main() {
 					&cli.BoolFlag{
 						Name: "minimize",
 						Aliases: []string{"m"},
+					},
+					&cli.BoolFlag{
+						Name: "sources",
+						Aliases: []string{"s"},
+					},
+					&cli.BoolFlag{
+						Name: "docs",
+						Aliases: []string{"d"},
 					},
 				},
 			},

@@ -3,19 +3,24 @@ package main
 import (
 	"encoding/json"
 	"os"
-	"strings"
 
 	"github.com/mrnavastar/assist/fs"
 )
 
 var modKey Lyra
 
+type Library struct {
+	Coordinate string
+	Path string
+}
+
 type Module struct {
 	Name string
 	GroupId string
 	Java string
+	Home string
 	Repos []string
-	Artifacts []Artifact
+	Libraries []Library
 }
 
 func (m *Module) Load() error {
@@ -32,27 +37,26 @@ func (m *Module) Load() error {
 }
 
 func (m *Module) Save() error {
+	if err := m.Sync(); err != nil {
+		return err
+	}
+
 	data, err := json.MarshalIndent(m, "", "    ")
 	if err != nil {
 		return err
 	}
 
-	err = os.WriteFile("lyra.json", data, os.ModePerm)
-	if err != nil {
-		return err
-	}
-	return m.Sync()
+	return os.WriteFile("lyra.json", data, os.ModePerm)
 }
 
-func (m Module) Sync() error {
-	cache, err := os.UserCacheDir()
-	if err != nil {
-		return err
-	}
+func (m *Module) Sync() error {
+	for _, library := range m.Libraries {
+		artifact, err := ParseArtifact(library.Coordinate)
+		if err != nil {
+			return err
+		}
 
-	path := strings.Join([]string{cache, "lyra", "libs"}, "/")
-	for _, artifact := range m.Artifacts {
-		err := artifact.Download(path, m.Repos)
+		err = artifact.Download(m.Home + "/libs", m.Repos)
 		if err != nil {
 			return err
 		}

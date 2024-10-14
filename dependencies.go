@@ -9,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
+// TODO: Dont allow duplicate libraries
 func Get(ctx *cli.Context) error {
 	mod := ctx.Context.Value(modKey).(Module)
 	if ops.IsEmpty(mod) {
@@ -31,13 +32,11 @@ func Get(ctx *cli.Context) error {
 		}
 	}
 
-	for _, a := range mod.Artifacts {
-		if a.Equals(artifact) {
-			return mod.Save()
-		}
-	}
+    var library Library
+	library.Coordinate = ctx.Args().First()
+	library.Path = artifact.ArtifactPath()
 
-	mod.Artifacts = append(mod.Artifacts, artifact)
+	mod.Libraries = append(mod.Libraries, library)
 	return mod.Save()
 }
 

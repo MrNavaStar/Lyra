@@ -22,8 +22,8 @@ func Build(ctx *cli.Context) error {
 
 	// Create Classpath
 	var cp []string
-	for _, artifact := range mod.Artifacts {
-		cp = append(cp, artifact.ArtifactPath())
+	for _, library := range mod.Libraries {
+		cp = append(cp, library.Path)
 	}
 
 	// Create Sourcepath
@@ -53,6 +53,13 @@ func Build(ctx *cli.Context) error {
 	if err := cmd.Run(); err != nil {
 		return err
 	}
+
+	if ctx.Bool("sources") {
+		if err := PackageSources(mod); err != nil {
+			return err
+		}
+	}
+
 	return Package(mod)
 }
 
@@ -117,4 +124,25 @@ func Package(mod Module) error {
 	}
 
 	return nil 
+}
+
+func PackageSources(mod Module) error {
+	c, group := babe.CreateJar(mod.Name + "-sources.jar")
+
+	err := filepath.WalkDir("src/main/java", func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() || !strings.HasSuffix(path, ".java") {
+			return nil
+		}
+
+		var member babe.JarMember
+		if err := member.FromFile(path); err != nil {
+			return err
+		}
+		c <- &member
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	return group.Wait()
 }
