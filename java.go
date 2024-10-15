@@ -10,9 +10,9 @@ import (
 	"strings"
 
 	"github.com/mrnavastar/assist/bytes"
+	fss "github.com/mrnavastar/assist/fs"
 	"github.com/mrnavastar/babe/babe"
 	"github.com/urfave/cli/v2"
-	fss "github.com/mrnavastar/assist/fs"
 )
 
 const manifest = "Manifest-Version: 1.0\nMain-Class: %s\n";
@@ -55,17 +55,21 @@ func Build(ctx *cli.Context) error {
 		return err
 	}
 
+	name := ctx.String("output")
+	if name == "" {
+		name = mod.Name
+	}
+
 	if ctx.Bool("sources") {
-		if err := PackageSources(mod); err != nil {
+		if err := PackageSources(name); err != nil {
 			return err
 		}
 	}
-
-	return Package(mod)
+	return Package(name)
 }
 
-func Package(mod Module) error {
-	c, group := babe.CreateJar(mod.Name + ".jar")
+func Package(name string) error {
+	c, group := babe.CreateJar(name + ".jar")
 
 	// Package class files
 	var mainClass string
@@ -130,8 +134,8 @@ func Package(mod Module) error {
 	return nil 
 }
 
-func PackageSources(mod Module) error {
-	c, group := babe.CreateJar(mod.Name + "-sources.jar")
+func PackageSources(name string) error {
+	c, group := babe.CreateJar(name + "-sources.jar")
 
 	err := filepath.WalkDir("src/main/java/", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() || !strings.HasSuffix(path, ".java") {
