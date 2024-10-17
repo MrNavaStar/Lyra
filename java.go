@@ -1,158 +1,40 @@
 package main
 
 import (
-	"errors"
 	"fmt"
-	"io/fs"
 	"os"
-	"os/exec"
-	"path/filepath"
+	"runtime"
 	"strings"
 
-	"github.com/mrnavastar/assist/bytes"
-	fss "github.com/mrnavastar/assist/fs"
-	"github.com/mrnavastar/babe/babe"
-	"github.com/urfave/cli/v2"
+	"github.com/mrnavastar/assist/web"
 )
 
-const manifest = "Manifest-Version: 1.0\nMain-Class: %s\n";
+const (
+	CorretoURL = "https://corretto.aws/downloads/latest/amazon-corretto-%d-%s-jdk%s"
+	CorretoLatest = 23
+)
 
-func Build(ctx *cli.Context) error {
-	mod := ctx.Context.Value(modKey).(Module)
-	mod.Sync()
-
-	// Create Classpath
-	var cp []string
-	for _, library := range mod.Libraries {
-		cp = append(cp, mod.Home + "/libs/" + library.Path)
-	}
-
-	// Create Sourcepath
-	var sp []string
-	filepath.WalkDir("src/main", func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-
-		if strings.HasSuffix(path, ".java") {
-			sp = append(sp, path)
-		}
-		return nil
-	})
-
-	if err := os.RemoveAll("build/output"); err != nil {
-		return err
-	}
-
-	cmd := exec.Command("javac", 
-		"-d", "build/output",
-		"-cp", strings.Join(cp, string(os.PathListSeparator)),
-		strings.Join(sp, " "))
-
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return err
-	}
-
-	name := ctx.String("output")
-	if name == "" {
-		name = mod.Name
-	}
-
-	if ctx.Bool("sources") {
-		if err := PackageSources(name); err != nil {
-			return err
-		}
-	}
-	return Package(name)
+var goToCorreto = map[string]string{
+	"linux/amd64": "x64-linux",
+	"linux/arm64": "aarch64-linux",
+	"darwin/amd64": "x64-macos",
+	"darwin/arm64": "aarch64-macos",
+	"windows/amd64": "x64-windows",
 }
 
-func Package(name string) error {
-	c, group := babe.CreateJar(name + ".jar")
+func getCorretoURL(version int) string {
+	os := runtime.GOOS
+	extension := ".tar.gz"
+	if strings.HasPrefix(os, "windows") {
+		extension = ".zip"
+	}
+	return fmt.Sprintf(CorretoURL, version, goToCorreto[os], extension)
+}
 
-	// Package class files
-	var mainClass string
-	err := filepath.WalkDir("build/output/", func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-
-		var member babe.JarMember
-		if err := member.FromFile(path); err != nil {
-			return err
-		}
-		member.Name = strings.TrimPrefix(member.Name, "build/output/")
-		c <- &member
-
-		class, err := member.GetAsClass()
-		if err != nil {
-			return err
-		}
-
-		if class.HasMainMethod() {
-			if mainClass != "" {
-				return errors.New("project has too many main method declarations - only one allowed")
-			}
-			mainClass = class.GetClassName()
-		}
-		return nil
-	})
+func EnsureJavaInstalled(version int) error {
+	cache, err := os.UserCacheDir()
 	if err != nil {
 		return err
 	}
-
-
-	if fss.Exists("src/main/resources/") {
-		// Package resources
-		err = filepath.WalkDir("src/main/resources/", func(path string, d fs.DirEntry, err error) error {
-			if d.IsDir() {
-				return nil
-			}
-
-			data, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
-
-			c <- &babe.JarMember{Name: strings.TrimPrefix(path, "src/main/resources/"), Buffer: &bytes.Buffer{Data: &data, Index: 0}}
-			return nil
-		})
-		if err != nil {
-			return err
-		}
-	}
-
-	manifestBytes := []byte(fmt.Sprintf(manifest, strings.ReplaceAll(mainClass, "/", ".")))
-	c <- &babe.JarMember{Name: "META-INF/MANIFEST.MF", Buffer: &bytes.Buffer{Data: &manifestBytes, Index: 0}}
-	close(c)
-
-	if err := group.Wait(); err != nil {
-		return err
-	}
-
-	return nil 
-}
-
-func PackageSources(name string) error {
-	c, group := babe.CreateJar(name + "-sources.jar")
-
-	err := filepath.WalkDir("src/main/java/", func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() || !strings.HasSuffix(path, ".java") {
-			return nil
-		}
-
-		var member babe.JarMember
-		if err := member.FromFile(path); err != nil {
-			return err
-		}
-		member.Name = strings.TrimPrefix(member.Name, "src/main/java/")
-		c <- &member
-		return nil
-	})
-	if err != nil {
-		return err
-	}
-	close(c)
-	return group.Wait()
+	return web.Download(cache + "/java/corretto/" + string(version) + "/", "corretto-" + string(version), getCorretoURL(version))
 }

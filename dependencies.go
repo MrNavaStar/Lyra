@@ -69,3 +69,7 @@ func AddRepo(ctx *cli.Context) error {
 	mod.Repos = append(mod.Repos, repo)
 	return mod.Save()
 }
+
+func FindModuleDependencies() {
+
+}

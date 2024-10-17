@@ -18,6 +18,10 @@ func init_project(ctx *cli.Context) error {
 		return errors.New("no project name provided")
 	}
 
+	if err := EnsureJavaInstalled(ctx.Int("version")); err != nil {
+		return err
+	}
+
 	if fs.Exists("lyra.json") {
 		return nil
 	}
@@ -56,6 +60,11 @@ func main() {
 					&cli.StringFlag{
 						Name: "group",
 						Aliases: []string{"g"},
+					},
+					&cli.IntFlag{
+						Name: "version",
+						Aliases: []string{"v"},
+						Value: CorretoLatest,
 					},
 				},
 			},
