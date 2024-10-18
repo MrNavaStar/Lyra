@@ -18,10 +18,6 @@ func init_project(ctx *cli.Context) error {
 		return errors.New("no project name provided")
 	}
 
-	if err := EnsureJavaInstalled(ctx.Int("version")); err != nil {
-		return err
-	}
-
 	if fs.Exists("lyra.json") {
 		return nil
 	}
@@ -34,6 +30,7 @@ func init_project(ctx *cli.Context) error {
 	mod := ctx.Context.Value(modKey).(Module)
 	mod.Name = ctx.Args().First()
 	mod.GroupId = ctx.String("group")
+	mod.Java = ctx.Int("version")
 	mod.Home = cache + "/lyra"
 	mod.Repos = append(mod.Repos, "https://repo.maven.apache.org/maven2")
 

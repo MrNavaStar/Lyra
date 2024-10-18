@@ -17,7 +17,7 @@ type Library struct {
 type Module struct {
 	Name string
 	GroupId string
-	Java string
+	Java int
 	Home string
 	Repos []string
 	Libraries []Library
@@ -50,6 +50,10 @@ func (m *Module) Save() error {
 }
 
 func (m *Module) Sync() error {
+	if err := EnsureJavaInstalled(m.Java); err != nil {
+		return err
+	}
+
 	for _, library := range m.Libraries {
 		artifact, err := ParseArtifact(library.Coordinate)
 		if err != nil {
