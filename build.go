@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -15,7 +15,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const manifest = "Manifest-Version: 1.0\nMain-Class: %s\n";
+const manifest = "Manifest-Version: 1.0\nMain-Class: %s\n"
 
 func Build(ctx *cli.Context) error {
 	mod := ctx.Context.Value(modKey).(Module)
@@ -24,7 +24,7 @@ func Build(ctx *cli.Context) error {
 	// Create Classpath
 	var cp []string
 	for _, library := range mod.Libraries {
-		cp = append(cp, mod.Home + "/libs/" + library.Path)
+		cp = append(cp, path.Join(mod.Home, "libs", library.Path))
 	}
 
 	// Create Sourcepath
@@ -44,14 +44,7 @@ func Build(ctx *cli.Context) error {
 		return err
 	}
 
-	cmd := exec.Command("javac", 
-		"-d", "build/output",
-		"-cp", strings.Join(cp, string(os.PathListSeparator)),
-		strings.Join(sp, " "))
-
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	if err := JavaCompile(mod, cp, sp); err != nil {
 		return err
 	}
 
@@ -69,7 +62,7 @@ func Build(ctx *cli.Context) error {
 }
 
 func Package(name string) error {
-	c, group := babe.CreateJar(name + ".jar")
+	c, group := babe.CreateJar(path.Join("build/jar", name+".jar"))
 
 	// Package class files
 	var mainClass string
@@ -121,7 +114,7 @@ func Package(name string) error {
 			return err
 		}
 	}
-	
+
 	manifestBytes := []byte(fmt.Sprintf(manifest, strings.ReplaceAll(mainClass, "/", ".")))
 	c <- &babe.JarMember{Name: "META-INF/MANIFEST.MF", Buffer: &bytes.Buffer{Data: &manifestBytes, Index: 0}}
 	close(c)
@@ -130,11 +123,11 @@ func Package(name string) error {
 		return err
 	}
 
-	return nil 
+	return nil
 }
 
 func PackageSources(name string) error {
-	c, group := babe.CreateJar(name + "-sources.jar")
+	c, group := babe.CreateJar(path.Join("build/jar", name+"-sources.jar"))
 
 	err := filepath.WalkDir("src/main/java/", func(path string, d fs.DirEntry, err error) error {
 		if d.IsDir() || !strings.HasSuffix(path, ".java") {

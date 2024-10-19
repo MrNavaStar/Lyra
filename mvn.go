@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"path"
 	"strings"
 
 	"github.com/mrnavastar/assist/web"
@@ -23,7 +24,7 @@ type Artifact struct {
 type metadata struct {
 	Timestamp   string `xml:"versioning>snapshot>timestamp"`
 	BuildNumber string `xml:"versioning>snapshot>buildNumber"`
-	Latest		string `xml:"versioning>latest"`
+	Latest      string `xml:"versioning>latest"`
 }
 
 func ParseArtifact(coordinate string) (Artifact, error) {
@@ -88,7 +89,7 @@ func (a Artifact) ArtifactUrl(repo string) (string, error) {
 }
 
 func (a Artifact) LatestVersion(repos []string) (string, error) {
-	for _, repo := range repos {	
+	for _, repo := range repos {
 		metadataUrl := repo + "/" + a.GroupPath() + "maven-metadata.xml"
 		resp, err := http.Get(metadataUrl)
 		if err != nil {
@@ -121,7 +122,7 @@ func (a Artifact) LatestSnapshotVersion(repo string) (string, error) {
 }
 
 func (a Artifact) ArtifactPath() string {
-	return a.GroupPath() + "/" + a.Filename()
+	return path.Join(a.GroupPath(), a.Filename())
 }
 
 func (a Artifact) GroupPath() string {
@@ -133,9 +134,9 @@ func (a Artifact) GroupPath() string {
 	}
 }
 
-func (a Artifact) Download(path string, repos []string) error {
+func (a Artifact) Download(filepath string, repos []string) error {
 	for _, repo := range repos {
-		if err := web.Download(path+"/"+a.GroupPath(), a.Filename(), repo + "/" + a.ArtifactPath()); err == nil {
+		if err := web.Download(path.Join(filepath, a.GroupPath(), a.Filename()), path.Join(repo, a.ArtifactPath())); err == nil {
 			return nil
 		}
 	}

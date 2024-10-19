@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"os"
+	"path"
 
 	"github.com/mrnavastar/assist/fs"
 )
@@ -11,15 +12,15 @@ var modKey Lyra
 
 type Library struct {
 	Coordinate string
-	Path string
+	Path       string
 }
 
 type Module struct {
-	Name string
-	GroupId string
-	Java int
-	Home string
-	Repos []string
+	Name      string
+	GroupId   string
+	Java      int
+	Home      string
+	Repos     []string
 	Libraries []Library
 }
 
@@ -50,7 +51,7 @@ func (m *Module) Save() error {
 }
 
 func (m *Module) Sync() error {
-	if err := EnsureJavaInstalled(m.Java); err != nil {
+	if err := EnsureJavaInstalled(*m); err != nil {
 		return err
 	}
 
@@ -60,7 +61,7 @@ func (m *Module) Sync() error {
 			return err
 		}
 
-		err = artifact.Download(m.Home + "/libs", m.Repos)
+		err = artifact.Download(path.Join(m.Home, "libs"), m.Repos)
 		if err != nil {
 			return err
 		}

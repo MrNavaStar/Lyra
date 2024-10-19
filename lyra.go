@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"os"
+	"path"
 	"strings"
 
 	"github.com/mrnavastar/assist/fs"
@@ -30,8 +31,8 @@ func init_project(ctx *cli.Context) error {
 	mod := ctx.Context.Value(modKey).(Module)
 	mod.Name = ctx.Args().First()
 	mod.GroupId = ctx.String("group")
-	mod.Java = ctx.Int("version")
-	mod.Home = cache + "/lyra"
+	mod.Java = ctx.Int("java")
+	mod.Home = path.Join(cache, "lyra")
 	mod.Repos = append(mod.Repos, "https://repo.maven.apache.org/maven2")
 
 	if err := os.MkdirAll(strings.Join([]string{"src/main/java", strings.ReplaceAll(mod.GroupId, ".", "/"), mod.Name}, "/"), os.ModePerm); err != nil {
@@ -48,55 +49,58 @@ func main() {
 	}
 
 	app := &cli.App{
-        Name:  "lyra",
+		Name: "lyra",
 		Commands: []*cli.Command{
 			{
-				Name: "init",
+				Name:   "init",
 				Action: init_project,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name: "group",
+						Name:    "group",
 						Aliases: []string{"g"},
 					},
 					&cli.IntFlag{
-						Name: "version",
-						Aliases: []string{"v"},
-						Value: CorretoLatest,
+						Name:    "java",
+						Aliases: []string{"j"},
+						Value:   CorretoLatest,
 					},
 				},
 			},
 			{
-				Name: "get",
+				Name:   "get",
 				Action: Get,
 			},
 			{
-				Name: "build",
+				Name:   "build",
 				Action: Build,
 				Flags: []cli.Flag{
 					&cli.StringFlag{
-						Name: "output",
+						Name:    "output",
 						Aliases: []string{"o"},
 					},
 					&cli.BoolFlag{
-						Name: "fat",
+						Name:    "fat",
 						Aliases: []string{"f"},
 					},
 					&cli.BoolFlag{
-						Name: "minimize",
+						Name:    "minimize",
 						Aliases: []string{"m"},
 					},
 					&cli.BoolFlag{
-						Name: "sources",
+						Name:    "sources",
 						Aliases: []string{"s"},
 					},
 					&cli.BoolFlag{
-						Name: "docs",
+						Name:    "docs",
 						Aliases: []string{"d"},
 					},
 				},
 			},
 			{
-				Name: "repo",
+				Name: "run",
+			},
+			{
+				Name:   "repo",
 				Action: AddRepo,
 				Subcommands: []*cli.Command{
 					{
@@ -108,9 +112,9 @@ func main() {
 				},
 			},
 		},
-    }
+	}
 
-    if err := app.RunContext(context.WithValue(context.Background(), modKey, mod), os.Args); err != nil {
-        log.Fatal(err)
-    }
+	if err := app.RunContext(context.WithValue(context.Background(), modKey, mod), os.Args); err != nil {
+		log.Fatal(err)
+	}
 }
