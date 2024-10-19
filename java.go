@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	CorretoURL    = "https://corretto.aws/downloads/latest/amazon-corretto-%d-%s-jdk%s"
-	CorretoLatest = 23
+	CorrettoURL    = "https://corretto.aws/downloads/latest/amazon-corretto-%d-%s-jdk%s"
+	CorrettoLatest = 23
 )
 
 var goToCorretto = map[string]string{
@@ -56,7 +56,7 @@ func decompress(file string) error {
 }
 
 func getCorretoURL(version int) string {
-	return fmt.Sprintf(CorretoURL, version, goToCorretto[runtime.GOOS+"/"+runtime.GOARCH], getExtension())
+	return fmt.Sprintf(CorrettoURL, version, goToCorretto[runtime.GOOS+"/"+runtime.GOARCH], getExtension())
 }
 
 func EnsureJavaInstalled(mod Module) error {

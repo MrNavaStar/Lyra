@@ -62,7 +62,7 @@ func main() {
 					&cli.IntFlag{
 						Name:    "java",
 						Aliases: []string{"j"},
-						Value:   CorretoLatest,
+						Value:   CorrettoLatest,
 					},
 				},
 			},

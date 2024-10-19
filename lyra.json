@@ -1,10 +1,8 @@
 {
-    "Name": "poggers",
-    "GroupId": "",
-    "Java": 17,
-    "Home": "/home/ethan/.cache/lyra",
-    "Repos": [
-        "https://repo.maven.apache.org/maven2"
-    ],
-    "Libraries": null
+  "Name": "poggers",
+  "GroupId": "",
+  "Java": 17,
+  "Home": "/home/ethan/.cache/lyra",
+  "Repos": ["https://repo.maven.apache.org/maven2"],
+  "Libraries": null
 }

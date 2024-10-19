@@ -8,14 +8,39 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
+	"time"
 
-	"github.com/mrnavastar/assist/bytes"
 	fss "github.com/mrnavastar/assist/fs"
 	"github.com/mrnavastar/babe/babe"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/sync/errgroup"
 )
 
 const manifest = "Manifest-Version: 1.0\nMain-Class: %s\n"
+
+func getNewestTime(directory string) (time.Time, error) {
+	var newest time.Time
+
+	if err := filepath.WalkDir(directory, func(path string, d fs.DirEntry, err error) error {
+		if d.IsDir() {
+			return nil
+		}
+
+		fileInfo, err := os.Stat(path)
+		if err != nil {
+			return err
+		}
+
+		if fileInfo.ModTime().Compare(newest) >= 0 {
+			newest = fileInfo.ModTime()
+		}
+		return nil
+	}); err != nil {
+		return time.UnixMilli(0), err
+	}
+	return newest, nil
+}
 
 func Build(ctx *cli.Context) error {
 	mod := ctx.Context.Value(modKey).(Module)
@@ -27,124 +52,158 @@ func Build(ctx *cli.Context) error {
 		cp = append(cp, path.Join(mod.Home, "libs", library.Path))
 	}
 
-	// Create Sourcepath
-	var sp []string
-	filepath.WalkDir("src/main", func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-
-		if strings.HasSuffix(path, ".java") {
-			sp = append(sp, path)
-		}
-		return nil
-	})
-
-	if err := os.RemoveAll("build/output"); err != nil {
-		return err
-	}
-
-	if err := JavaCompile(mod, cp, sp); err != nil {
-		return err
-	}
-
-	name := ctx.String("output")
-	if name == "" {
-		name = mod.Name
-	}
-
-	if ctx.Bool("sources") {
-		if err := PackageSources(name); err != nil {
-			return err
-		}
-	}
-	return Package(name)
-}
-
-func Package(name string) error {
-	c, group := babe.CreateJar(path.Join("build/jar", name+".jar"))
-
-	// Package class files
-	var mainClass string
-	err := filepath.WalkDir("build/output/", func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() {
-			return nil
-		}
-
-		var member babe.JarMember
-		if err := member.FromFile(path); err != nil {
-			return err
-		}
-		member.Name = strings.TrimPrefix(member.Name, "build/output/")
-		c <- &member
-
-		class, err := member.GetAsClass()
-		if err != nil {
-			return err
-		}
-
-		if class.HasMainMethod() {
-			if mainClass != "" {
-				return errors.New("project has too many main method declarations - only one allowed")
-			}
-			mainClass = class.GetClassName()
-		}
-		return nil
-	})
+	files, err := os.ReadDir("src")
 	if err != nil {
 		return err
 	}
 
-	if fss.Exists("src/main/resources/") {
-		// Package resources
-		err = filepath.WalkDir("src/main/resources/", func(path string, d fs.DirEntry, err error) error {
+	buildGroup, _ := errgroup.WithContext(ctx.Context)
+	for _, module := range files {
+		buildGroup.Go(func() error {
+			// Create Sourcepath
+			var sp []string
+			if err := filepath.WalkDir(path.Join("src", module.Name(), "java"), func(path string, d fs.DirEntry, err error) error {
+				if d.IsDir() {
+					return nil
+				}
+
+				if strings.HasSuffix(path, ".java") {
+					sp = append(sp, path)
+				}
+				return nil
+			}); err != nil {
+				return err
+			}
+
+			// Only recompile if the source code is newer than the already compiled code
+			sourceTime, _ := getNewestTime(path.Join("src", module.Name(), "java"))
+			outputTime, _ := getNewestTime(path.Join("build/output", module.Name()))
+			if outputTime.Before(sourceTime) {
+				if err := os.RemoveAll(path.Join("build/output", module.Name())); err != nil {
+					return err
+				}
+
+				if err := JavaCompile(mod, cp, sp); err != nil {
+					return err
+				}
+				outputTime = time.Now()
+			}
+
+			buildGroup.Go(func() error {
+				return Package(module.Name(), outputTime)
+			})
+
+			if ctx.Bool("sources") {
+				buildGroup.Go(func() error {
+					return PackageSources(module.Name(), outputTime)
+				})
+			}
+			return nil
+		})
+	}
+
+	return buildGroup.Wait()
+}
+
+func Package(name string, outputTime time.Time) error {
+	filename := path.Join("build/jar", name+".jar")
+	resources := path.Join("src", name, "resources")
+	resourceTime, _ := getNewestTime(resources)
+
+	// Don't repackage jar if resources and compiled sources are up to date
+	info, err := os.Stat(filename)
+	if !os.IsNotExist(err) && outputTime.Before(info.ModTime()) && resourceTime.Before(info.ModTime()) {
+		return nil
+	}
+
+	jar := babe.CreateJar(filename)
+
+	// Package resources async
+	if fss.Exists(resources) {
+		return fss.Cwd(resources, func() error {
+			return filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+				if d.IsDir() {
+					return nil
+				}
+
+				jar.Task(func(jar *babe.Jar) error {
+					member, err := babe.JarMemberFromFile(path)
+					if err != nil {
+						return err
+					}
+					jar.Add(member)
+					return nil
+				})
+				return nil
+			})
+		})
+	}
+
+	// Package class files async
+	if err := fss.Cwd(path.Join("build/output", name), func() error {
+		var manifestAdded atomic.Bool
+		return filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 			if d.IsDir() {
 				return nil
 			}
 
-			data, err := os.ReadFile(path)
-			if err != nil {
-				return err
-			}
+			jar.Task(func(jar *babe.Jar) error {
+				member, err := babe.JarMemberFromFile(path)
+				if err != nil {
+					return err
+				}
+				jar.Add(member)
 
-			c <- &babe.JarMember{Name: strings.TrimPrefix(path, "src/main/resources/"), Buffer: &bytes.Buffer{Data: &data, Index: 0}}
+				class, err := member.GetAsClass()
+				if err != nil {
+					return err
+				}
+
+				if class.HasMainMethod() {
+					if manifestAdded.Load() {
+						return errors.New("project has too many main method declarations - only one allowed")
+					}
+					jar.Add(babe.JarMemberFromString("META-INF/MANIFEST.MF", fmt.Sprintf(manifest, strings.ReplaceAll(class.GetClassName(), "/", "."))))
+					manifestAdded.Store(true)
+				}
+				return nil
+			})
 			return nil
 		})
-		if err != nil {
-			return err
-		}
-	}
-
-	manifestBytes := []byte(fmt.Sprintf(manifest, strings.ReplaceAll(mainClass, "/", ".")))
-	c <- &babe.JarMember{Name: "META-INF/MANIFEST.MF", Buffer: &bytes.Buffer{Data: &manifestBytes, Index: 0}}
-	close(c)
-
-	if err := group.Wait(); err != nil {
+	}); err != nil {
 		return err
 	}
-
-	return nil
+	return jar.Wait()
 }
 
-func PackageSources(name string) error {
-	c, group := babe.CreateJar(path.Join("build/jar", name+"-sources.jar"))
+func PackageSources(name string, outputTime time.Time) error {
+	filename := path.Join("build/jar", name+"-sources.jar")
 
-	err := filepath.WalkDir("src/main/java/", func(path string, d fs.DirEntry, err error) error {
-		if d.IsDir() || !strings.HasSuffix(path, ".java") {
-			return nil
-		}
-
-		var member babe.JarMember
-		if err := member.FromFile(path); err != nil {
-			return err
-		}
-		member.Name = strings.TrimPrefix(member.Name, "src/main/java/")
-		c <- &member
+	// Don't repackage sources if they are already up to date
+	info, err := os.Stat(filename)
+	if !os.IsNotExist(err) && outputTime.Before(info.ModTime()) {
 		return nil
-	})
-	if err != nil {
+	}
+
+	jar := babe.CreateJar(filename)
+	if err := fss.Cwd(path.Join("src", name, "java"), func() error {
+		return filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+			if d.IsDir() || !strings.HasSuffix(path, ".java") {
+				return nil
+			}
+
+			jar.Task(func(jar *babe.Jar) error {
+				member, err := babe.JarMemberFromFile(path)
+				if err != nil {
+					return err
+				}
+				jar.Add(member)
+				return nil
+			})
+			return nil
+		})
+	}); err != nil {
 		return err
 	}
-	close(c)
-	return group.Wait()
+	return jar.Wait()
 }

@@ -2,11 +2,10 @@
 
 platforms=(
   "linux/amd64"
-  "windows/amd64"
-  "darwin/amd64"
   "linux/arm64"
-  "windows/arm64"
+  "darwin/amd64"
   "darwin/arm64"
+  "windows/amd64"
 )
 
 for platform in "${platforms[@]}"; do
@@ -17,4 +16,3 @@ for platform in "${platforms[@]}"; do
   echo "Building for $GOOS/$GOARCH..."
   env GOOS=$GOOS GOARCH=$GOARCH go build -o "$output"
 done
-
