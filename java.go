@@ -59,7 +59,7 @@ func getCorretoURL(version int) string {
 	return fmt.Sprintf(CorrettoURL, version, goToCorretto[runtime.GOOS+"/"+runtime.GOARCH], getExtension())
 }
 
-func EnsureJavaInstalled(mod Module) error {
+func EnsureJavaInstalled(mod Project) error {
 	if fs.Exists(path.Join(mod.Home, "java", strconv.Itoa(mod.Java), "corretto/bin/java")) {
 		return nil
 	}
@@ -78,7 +78,7 @@ func EnsureJavaInstalled(mod Module) error {
 	return nil
 }
 
-func JavaCompile(mod Module, classpath []string, sourcepath []string) error {
+func JavaCompile(mod Project, classpath []string, sourcepath []string) error {
 	cmd := exec.Command(path.Join(mod.Home, "java", strconv.Itoa(mod.Java), "corretto/bin/javac"),
 		"-d", "build/output",
 		"-cp", strings.Join(classpath, string(os.PathListSeparator)),
@@ -89,7 +89,7 @@ func JavaCompile(mod Module, classpath []string, sourcepath []string) error {
 	return cmd.Run()
 }
 
-func JavaRun(mod Module, classpath []string, jar string) error {
+func JavaRun(mod Project, classpath []string, jar string) error {
 	cmd := exec.Command(path.Join(mod.Home, "java", strconv.Itoa(mod.Java), "corretto/bin/java"),
 		"-cp", strings.Join(classpath, string(os.PathListSeparator)),
 		"-jar", jar)

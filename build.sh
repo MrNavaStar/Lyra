@@ -14,5 +14,5 @@ for platform in "${platforms[@]}"; do
   [[ "$GOOS" == "windows" ]] && output+=".exe"
 
   echo "Building for $GOOS/$GOARCH..."
-  env GOOS=$GOOS GOARCH=$GOARCH go build -o "$output"
+  env GOOS=$GOOS GOARCH=$GOARCH go build -o "$output" -tags "llua lua54"
 done

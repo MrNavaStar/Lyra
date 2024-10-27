@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -43,13 +42,13 @@ func getNewestTime(directory string) (time.Time, error) {
 }
 
 func Build(ctx *cli.Context) error {
-	mod := ctx.Context.Value(modKey).(Module)
-	mod.Sync()
+	project := ctx.Context.Value(projectKey).(Project)
+	project.Sync()
 
 	// Create Classpath
 	var cp []string
-	for _, library := range mod.Libraries {
-		cp = append(cp, path.Join(mod.Home, "libs", library.Path))
+	for _, library := range project.Dependencies {
+		cp = append(cp, path.Join(project.Home, "libs", library.Path))
 	}
 
 	files, err := os.ReadDir("src")
@@ -83,14 +82,14 @@ func Build(ctx *cli.Context) error {
 					return err
 				}
 
-				if err := JavaCompile(mod, cp, sp); err != nil {
+				if err := JavaCompile(project, cp, sp); err != nil {
 					return err
 				}
 				outputTime = time.Now()
 			}
 
 			buildGroup.Go(func() error {
-				return Package(module.Name(), outputTime)
+				return Package(project, module.Name(), outputTime, ctx.Bool("fat"))
 			})
 
 			if ctx.Bool("sources") {
@@ -105,7 +104,7 @@ func Build(ctx *cli.Context) error {
 	return buildGroup.Wait()
 }
 
-func Package(name string, outputTime time.Time) error {
+func Package(project Project, name string, outputTime time.Time, fat bool) error {
 	filename := path.Join("build/jar", name+".jar")
 	resources := path.Join("src", name, "resources")
 	resourceTime, _ := getNewestTime(resources)
@@ -120,7 +119,31 @@ func Package(name string, outputTime time.Time) error {
 
 	// Package resources async
 	if fss.Exists(resources) {
-		return fss.Cwd(resources, func() error {
+		jar.Task(func(jar *babe.Jar) error {
+			return fss.Cwd(resources, func() error {
+				return filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
+					if d.IsDir() {
+						return nil
+					}
+
+					jar.Task(func(jar *babe.Jar) error {
+						member, err := babe.JarMemberFromFile(path)
+						if err != nil {
+							return err
+						}
+						jar.Add(member)
+						return nil
+					})
+					return nil
+				})
+			})
+		})
+	}
+
+	// Package class files async
+	jar.Task(func(jar *babe.Jar) error {
+		return fss.Cwd(path.Join("build/output", name), func() error {
+			var manifestAdded atomic.Bool
 			return filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 				if d.IsDir() {
 					return nil
@@ -132,47 +155,25 @@ func Package(name string, outputTime time.Time) error {
 						return err
 					}
 					jar.Add(member)
+
+					class, err := member.GetAsClass()
+					if err != nil {
+						return err
+					}
+
+					if class.HasMainMethod() {
+						if manifestAdded.Load() {
+							return fmt.Errorf("module: %s has too many main method declarations - only one allowed", name)
+						}
+						jar.Add(babe.JarMemberFromString("META-INF/MANIFEST.MF", fmt.Sprintf(manifest, strings.ReplaceAll(class.GetClassName(), "/", "."))))
+						manifestAdded.Store(true)
+					}
 					return nil
 				})
 				return nil
 			})
 		})
-	}
-
-	// Package class files async
-	if err := fss.Cwd(path.Join("build/output", name), func() error {
-		var manifestAdded atomic.Bool
-		return filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
-			if d.IsDir() {
-				return nil
-			}
-
-			jar.Task(func(jar *babe.Jar) error {
-				member, err := babe.JarMemberFromFile(path)
-				if err != nil {
-					return err
-				}
-				jar.Add(member)
-
-				class, err := member.GetAsClass()
-				if err != nil {
-					return err
-				}
-
-				if class.HasMainMethod() {
-					if manifestAdded.Load() {
-						return errors.New("project has too many main method declarations - only one allowed")
-					}
-					jar.Add(babe.JarMemberFromString("META-INF/MANIFEST.MF", fmt.Sprintf(manifest, strings.ReplaceAll(class.GetClassName(), "/", "."))))
-					manifestAdded.Store(true)
-				}
-				return nil
-			})
-			return nil
-		})
-	}); err != nil {
-		return err
-	}
+	})
 	return jar.Wait()
 }
 

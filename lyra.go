@@ -28,7 +28,7 @@ func init_project(ctx *cli.Context) error {
 		return err
 	}
 
-	mod := ctx.Context.Value(modKey).(Module)
+	mod := ctx.Context.Value(projectKey).(Project)
 	mod.Name = ctx.Args().First()
 	mod.GroupId = ctx.String("group")
 	mod.Java = ctx.Int("java")
@@ -42,9 +42,13 @@ func init_project(ctx *cli.Context) error {
 }
 
 func main() {
-	var mod Module
+	var mod Project
 	err := mod.Load()
 	if err != nil {
+		log.Fatal(err)
+	}
+
+	if err := LoadPlugin(context.Background(), "plugins/mvn"); err != nil {
 		log.Fatal(err)
 	}
 
@@ -68,16 +72,18 @@ func main() {
 			},
 			{
 				Name:   "get",
-				Action: Get,
+				Action: GetDependencyFromCLI,
+				Flags: []cli.Flag{
+					&cli.BoolFlag{
+						Name:    "include",
+						Aliases: []string{"i"},
+					},
+				},
 			},
 			{
 				Name:   "build",
 				Action: Build,
 				Flags: []cli.Flag{
-					&cli.StringFlag{
-						Name:    "output",
-						Aliases: []string{"o"},
-					},
 					&cli.BoolFlag{
 						Name:    "fat",
 						Aliases: []string{"f"},
@@ -114,7 +120,7 @@ func main() {
 		},
 	}
 
-	if err := app.RunContext(context.WithValue(context.Background(), modKey, mod), os.Args); err != nil {
+	if err := app.RunContext(context.WithValue(context.Background(), projectKey, mod), os.Args); err != nil {
 		log.Fatal(err)
 	}
 }
