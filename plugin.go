@@ -57,12 +57,12 @@ func LoadPlugin(ctx context.Context, name string) error {
 	
 	unicode.GoLuaReplaceFuncs(l)
 
-	l.NewTable()
+	l.NewMetaTable("lyra")
 	for name, function := range api {
-		l.PushGoFunction(function)
-		l.SetField(-2, name)
+		//l.PushGoFunction(function)
+		//l.SetField(-2, name)
+		l.SetMetaMethod(name, function)
 	}
-	l.SetGlobal("lyra")
 
 	if err := l.DoFile(path.Join(name, "based.lua")); err != nil {
 		return err
