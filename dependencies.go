@@ -24,7 +24,7 @@ type Dependency struct {
 }
 
 func AddDependencyResolver(l *lua.State) int {
-	resolvers = append(resolvers, PluginFunc{state: l, function: l.ToGoFunction(1)})
+	resolvers = append(resolvers, PluginFunc{state: l, function: l.Ref(lua.LUA_REGISTRYINDEX)})
 	return 1
 }
 
@@ -42,7 +42,9 @@ func GetDependency(ctx context.Context, coordinate string, include bool) error {
 	}
 
 	for _, resolver := range resolvers {
-		resolver.Call(project.Repos, coordinate)
+		if err := resolver.Call(project.Repos, coordinate); err != nil {
+			return err
+		}
 	}
 
 	return project.Save()

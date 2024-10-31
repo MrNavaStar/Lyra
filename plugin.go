@@ -4,39 +4,25 @@ import (
 	"context"
 	"path"
 
-	"github.com/aarzilli/golua/lua"
-	"github.com/ambrevar/golua/unicode"
+	"github.com/mrnavastar/golua/lua"
+	"github.com/mrnavastar/goluare"
 )
 
 type PluginFunc struct {
 	state *lua.State
-	function lua.LuaGoFunction
-}
-
-func test(l *lua.State) int {
-	print("pog")
-	return 1
+	function int
 }
 
 func (f PluginFunc) Call(args ...any) error {
-	//var luaArgs []lua.LValue
-	//for _, arg := range args {
-	//	luaArgs = append(luaArgs, gluaparse.DecodeValue(f.state, arg))
-	//}
-
-	//f.state.MustCall()
-
-	//return f.state.CallByParam(lua.P{
-	//	Fn: f.function,
-	//	NRet: 1,
-	//	Protect: true,
-    //}, luaArgs...)
-	return nil
+	f.state.RawGeti(lua.LUA_REGISTRYINDEX, f.function)
+	for _, arg := range args {
+		f.state.PushGoInterface(arg)
+	}
+	return f.state.Call(len(args), 0)
 }
 
 var api = map[string]lua.LuaGoFunction{
 	"add_dependency_resolver": AddDependencyResolver,
-	"pog": test,
 }
 
 func LoadPlugin(ctx context.Context, name string) error {
@@ -48,23 +34,11 @@ func LoadPlugin(ctx context.Context, name string) error {
 		return 1
 	})
 
-	// Load plugin libraries
-	//gluaparse.PreloadJSON(l)
-	//gluaparse.PreloadYAML(l)
-	//gluaparse.PreloadXML(l)
-	//l.PreloadModule("re", gluare.Loader)
-	//l.PreloadModule("http", gluahttp.NewHttpModule(&http.Client{}).Loader)
-	
-	unicode.GoLuaReplaceFuncs(l)
+	l.RegisterLib("string", goluare.REGEX)
+	l.RegisterLib("lyra", api)
+	l.Pop(2)
 
-	l.NewMetaTable("lyra")
-	for name, function := range api {
-		//l.PushGoFunction(function)
-		//l.SetField(-2, name)
-		l.SetMetaMethod(name, function)
-	}
-
-	if err := l.DoFile(path.Join(name, "based.lua")); err != nil {
+	if err := l.DoFile(path.Join(name, "init.lua")); err != nil {
 		return err
 	}
 	return nil
