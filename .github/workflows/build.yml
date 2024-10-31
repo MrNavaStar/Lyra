@@ -18,7 +18,7 @@ jobs:
           go-version: 1.22.x
       
       - name: Get Lua
-        run: apt install lua-dev -y
+        run: sudo apt-get install lua5.4 liblua5.4-dev -y
 
       - name: Install Dependencies
         run: go get .
