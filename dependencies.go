@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/aarzilli/golua/lua"
+	"github.com/mrnavastar/golua/lua"
 	"github.com/mrnavastar/assist/ops"
 	"github.com/mrnavastar/babe/babe"
 	"github.com/urfave/cli/v2"
