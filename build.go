@@ -43,12 +43,15 @@ func getNewestTime(directory string) (time.Time, error) {
 
 func Build(ctx *cli.Context) error {
 	project := ctx.Context.Value(projectKey).(Project)
-	project.Sync()
 
 	// Create Classpath
 	var cp []string
 	for _, library := range project.Dependencies {
-		cp = append(cp, path.Join(project.Home, "libs", library.Path))
+		dep_path, err := library.ResolveMain(project)
+		if err != nil {
+			return err
+		}
+		cp = append(cp, dep_path)
 	}
 
 	files, err := os.ReadDir("src")

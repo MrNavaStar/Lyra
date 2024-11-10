@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"os"
-	"path"
-	"strings"
 
 	"github.com/mrnavastar/assist/fs"
 )
@@ -18,7 +16,7 @@ type Project struct {
 	Java         int          `json:",omitempty"`
 	Home         string       `json:",omitempty"`
 	Repos        []string     `json:",omitempty"`
-	Dependencies []Dependency `json:",omitempty"`
+	Dependencies map[string]Dependency `json:",omitempty"`
 	Plugins		 []string
 }
 
@@ -32,14 +30,17 @@ func (p *Project) Load() error {
 		return err
 	}
 
-	return json.Unmarshal(data, &p)
+	if err := json.Unmarshal(data, &p); err != nil {
+		return err
+	}
+	
+	if p.Dependencies == nil {
+		p.Dependencies = make(map[string]Dependency)
+	}
+	return nil
 }
 
 func (p *Project) Save() error {
-	if err := p.Sync(); err != nil {
-		return err
-	}
-
 	data, err := json.MarshalIndent(p, "", "    ")
 	if err != nil {
 		return err
@@ -48,27 +49,20 @@ func (p *Project) Save() error {
 	return os.WriteFile("lyra.json", data, os.ModePerm)
 }
 
-func (p *Project) Sync() error {
-	if err := EnsureJavaInstalled(*p); err != nil {
-		return err
-	}
-	return DownloadDependencies(*p)
-}
-
 func (p *Project) GetDependencyByCoordinate(coordinate string) (*Dependency, error) {
-	for _, dep := range p.Dependencies {
-		if strings.Split(dep.Coordinate, ":")[0] == strings.Split(coordinate, ":")[0] {
-			return &dep, nil
-		}
+	for _, _ = range p.Dependencies {
+		//if strings.Split(dep.Coordinate, ":")[0] == strings.Split(coordinate, ":")[0] {
+		//	return &dep, nil
+		//}
 	}
 	return &Dependency{}, errors.New("no dependency found")
 }
 
 func (p *Project) GetDependencyByPath(dependencyPath string) (*Dependency, error) {
-	for _, dep := range p.Dependencies {
-		if path.Clean(dep.Path) == path.Clean(dependencyPath) {
-			return &dep, nil
-		}
+	for _, _ = range p.Dependencies {
+		//if path.Clean(dep.Path) == path.Clean(dependencyPath) {
+		//	return &dep, nil
+		//}
 	}
 	return &Dependency{}, errors.New("no dependency found")
 }

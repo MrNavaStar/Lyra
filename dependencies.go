@@ -3,14 +3,17 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io/fs"
 	"net/http"
+	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
 
-	"github.com/mrnavastar/golua/lua"
+	"github.com/aarzilli/golua/lua"
 	"github.com/mrnavastar/assist/ops"
+	"github.com/mrnavastar/assist/web"
 	"github.com/mrnavastar/babe/babe"
 	"github.com/urfave/cli/v2"
 )
@@ -18,9 +21,59 @@ import (
 var resolvers []PluginFunc
 
 type Dependency struct {
-	Coordinate string `json:",omitempty"`
-	Path       string `json:",omitempty"`
-	Include    bool   `json:",omitempty"`
+	Name	string `json:",omitempty"`
+	Version string `json:",omitempty"`
+	Main	string `json:",omitempty"`
+	Sources string `json:",omitempty"`
+	Docs	string `json:",omitempty"`
+	Include bool   `json:",omitempty"`
+}
+
+func (d *Dependency) resolve(project Project, uri *string) (string, error) {
+	parsedURL, err := url.Parse(*uri)
+    if err != nil {
+        return "", err
+    }
+
+	switch parsedURL.Scheme {
+	case "http", "https":
+		path := path.Join(project.Home, "libs", parsedURL.Path)
+
+		if err := web.Download(path, *uri); err != nil {
+			return "", err
+		}
+
+		*uri = "file://" + path
+		return d.resolve(project, uri)
+
+	case "file", "":
+		path := parsedURL.Path
+        // For Windows, remove the leading `/` in paths like `file:///C:/path/to/file`
+        if strings.HasPrefix(path, "/") && filepath.VolumeName(path) != "" {
+            path = strings.TrimPrefix(path, "/")
+        }
+        return filepath.Clean(path), nil
+	}
+
+	return "", errors.New("unable to resolve dependency: " + d.Main)
+}
+
+func (d *Dependency) ResolveMain(project Project) (string, error) {
+	return d.resolve(project, &d.Main)
+}
+
+func (d *Dependency) ResolveSources(project Project) (string, error) {
+	if d.Sources == "" {
+		return "", nil
+	}
+	return d.resolve(project, &d.Sources)
+}
+
+func (d *Dependency) ResolveDocs(project Project) (string, error) {
+	if d.Docs == "" {
+		return "", nil
+	}
+	return d.resolve(project, &d.Docs)
 }
 
 func AddDependencyResolver(l *lua.State) int {
@@ -35,6 +88,14 @@ func GetDependencyFromCLI(ctx *cli.Context) error {
 	return GetDependency(ctx.Context, ctx.Args().First(), ctx.Bool("include"))
 }
 
+func GetDependencyFromAPI(l *lua.State) int {
+	if err := GetDependency(context.Background(), l.ToString(1), false); err != nil {
+		l.PushString(fmt.Sprintf("%s", err))
+		return 1
+	}
+	return 0
+}
+
 func GetDependency(ctx context.Context, coordinate string, include bool) error {
 	project := ctx.Value(projectKey).(Project)
 	if ops.IsEmpty(project) {
@@ -42,8 +103,28 @@ func GetDependency(ctx context.Context, coordinate string, include bool) error {
 	}
 
 	for _, resolver := range resolvers {
-		if err := resolver.Call(project.Repos, coordinate); err != nil {
+		var deps map[string]Dependency
+		if err := resolver.Call(1, project.Repos, coordinate); err != nil {
 			return err
+		}
+		resolver.ReturnTable(&deps)
+
+		if ops.IsEmpty(deps) {
+			continue
+		} 
+
+		for key, dep := range deps {
+			if _, err := dep.ResolveMain(project); err != nil {
+				return err
+			}
+			if _, err := dep.ResolveSources(project); err != nil {
+				dep.Sources = ""
+			}
+			if _, err := dep.ResolveDocs(project); err != nil {
+				dep.Docs = ""
+			}
+			project.Dependencies[key] = dep
+			println("got: " + key + ":" + dep.Version)
 		}
 	}
 
@@ -69,19 +150,13 @@ func AddRepo(ctx *cli.Context) error {
 		}
 	}
 
-	resp, err := http.Get(repo)
+	_, err := http.Get(repo)
 	if err != nil {
-		return err
-	} else if resp.StatusCode != http.StatusOK {
-		return errors.New("repo is unreachable")
+		return fmt.Errorf("repo is unreachable: %s", err)
 	}
 
 	project.Repos = append(project.Repos, repo)
 	return project.Save()
-}
-
-func DownloadDependencies(project Project) error {
-	return nil
 }
 
 func FindModuleDependencies(project Project, name string) (dependencies []Dependency, err error) {
