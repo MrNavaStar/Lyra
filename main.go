@@ -8,8 +8,16 @@ import (
 
 func main() {
 	if lyra.Java.GetPath() == "" {
-		if err := lyra.Java.SetPath(os.Getenv("JAVA_HOME")); err != nil {
-			log.Fatal(err)
+		javaHome := os.Getenv("JAVA_HOME")
+		if javaHome == "" {
+			if link, err := os.Readlink("/usr/bin/java"); err == nil {
+				javaHome = link
+			}
+		}
+		if javaHome != "" {
+			if err := lyra.Java.SetPath(javaHome); err != nil {
+				log.Fatal(err)
+			}
 		}
 	}
 

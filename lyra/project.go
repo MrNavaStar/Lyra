@@ -79,6 +79,10 @@ func (project *Project) Go(f func() error) {
 }
 
 func (project *Project) AddRepo(repo url.URL) error {
+	if !fs.Exists("lyra.json") {
+		return nil
+	}
+
 	for _, r := range project.repos {
 		if r == repo {
 			return nil
@@ -97,6 +101,10 @@ func (project *Project) AddRepo(repo url.URL) error {
 }
 
 func (project *Project) AddDependency(artifact Artifact) error {
+	if !fs.Exists("lyra.json") {
+		return nil
+	}
+
 	index := -1
 	for i, existingArtifact := range project.artifacts {
 		if existingArtifact.SameAs(artifact) {
