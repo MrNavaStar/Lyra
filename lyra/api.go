@@ -20,7 +20,6 @@ var app = cli.App{
 	UseShortOptionHandling: true,
 	EnableBashCompletion:   true,
 	Suggest:                true,
-	Commands:               Command.commands,
 	Authors: []*cli.Author{
 		{
 			Name:  "MrNavaStar",
@@ -30,6 +29,7 @@ var app = cli.App{
 }
 
 func (*CommandAPI) Run(args ...string) error {
+	app.Commands = Command.commands
 	return app.Run(args)
 }
 
