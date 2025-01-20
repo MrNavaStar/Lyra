@@ -2,6 +2,7 @@ package lyra
 
 import (
 	"errors"
+	"github.com/mrnavastar/assist/fs"
 	"github.com/mrnavastar/assist/web"
 	"github.com/urfave/cli/v2"
 	"net/url"
@@ -25,20 +26,21 @@ func init() {
 	Dependency.RegisterResolver("http", resolveHttp)
 	Dependency.RegisterResolver("https", resolveHttp)
 
-	Command.Register(&cli.Command{
-		Name: "get",
-		Args: true,
-		Action: func(context *cli.Context) error {
-			if !context.Args().Present() {
-				return errors.New("please specify at least one slug")
-			}
-
-			for _, slug := range context.Args().Slice() {
-				GetCurrentProject().Go(func() error {
-					return get(slug)
-				})
-			}
-			return nil
+	Command.RegisterMany([]*cli.Command{
+		{
+			Name:   "get",
+			Args:   true,
+			Action: get,
+			Subcommands: []*cli.Command{
+				{
+					Name:   "repo",
+					Args:   true,
+					Action: addRepo,
+				},
+			},
+		},
+		{
+			Name: "tidy",
 		},
 	})
 }
@@ -109,18 +111,46 @@ func (artifact Artifact) SameAs(other Artifact) bool {
 	return artifact.Name == other.Name && artifact.Group == other.Group
 }
 
-func get(slug string) error {
-	for _, parser := range Dependency.parsers {
-		artifact, err := parser(slug)
-		if err != nil {
-			return err
-		}
+func get(ctx *cli.Context) error {
+	if !fs.Exists("lyra.json") {
+		return errors.New("no project in current directory")
+	}
 
-		if err := GetCurrentProject().AddDependency(artifact); err == nil {
+	if !ctx.Args().Present() {
+		return errors.New("please specify at least one slug")
+	}
+
+	for _, slug := range ctx.Args().Slice() {
+		GetCurrentProject().Go(func() error {
+			for _, parser := range Dependency.parsers {
+				artifact, err := parser(slug)
+				if err != nil {
+					return err
+				}
+
+				if err := GetCurrentProject().AddDependency(artifact); err == nil {
+					return nil
+				}
+			}
 			return nil
-		}
+		})
 	}
 	return nil
+}
+
+func addRepo(ctx *cli.Context) error {
+	if !fs.Exists("lyra.json") {
+		return errors.New("no project in current directory")
+	}
+	if ctx.Args().Len() == 0 {
+		return errors.New("no repo provided")
+	}
+
+	parsed, err := url.Parse(ctx.Args().First())
+	if err != nil {
+		return err
+	}
+	return GetCurrentProject().AddRepo(*parsed)
 }
 
 /*func FindModuleDependencies(project *Project, name string) (dependencies []Dependency, err error) {

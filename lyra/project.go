@@ -40,23 +40,31 @@ func (project *Project) modify(modifier func(*Project)) {
 }
 
 func (project *Project) Name() string {
+	project.mu.Lock()
+	defer project.mu.Unlock()
 	return project.name
 }
 
 func (project *Project) Group() string {
+	project.mu.Lock()
+	defer project.mu.Unlock()
 	return project.groupId
 }
 
 func (project *Project) Dependencies() []Artifact {
+	project.mu.Lock()
+	defer project.mu.Unlock()
 	return project.artifacts
 }
 
-func (project *Project) Repos() []string {
-
+func (project *Project) Repos() []url.URL {
+	project.mu.Lock()
+	defer project.mu.Unlock()
+	return project.repos
 }
 
 func (project *Project) GetClasspath() (classpath []string, err error) {
-	for _, artifact := range project.artifacts {
+	for _, artifact := range project.Dependencies() {
 		resolved, err := artifact.Resolve()
 		if err != nil {
 			return nil, err
@@ -77,7 +85,7 @@ func (project *Project) AddRepo(repo url.URL) error {
 		}
 	}
 
-	_, err := http.Get(repo)
+	_, err := http.Get(repo.String())
 	if err != nil {
 		return fmt.Errorf("repo is unreachable: %s", err)
 	}
@@ -165,16 +173,6 @@ func init() {
 			Action: initProject,
 		},
 		{
-			Name: "repo",
-			Subcommands: []*cli.Command{
-				{
-					Name:   "add",
-					Args:   true,
-					Action: addRepo,
-				},
-			},
-		},
-		{
 			Name:   "classpath",
 			Args:   false,
 			Action: showClasspath,
@@ -192,19 +190,19 @@ func initProject(ctx *cli.Context) error {
 	project := GetCurrentProject()
 	project.name = ctx.Args().First()
 	project.groupId = ctx.String("group")
-	project.repos = append(project.repos, "https://repo.maven.apache.org/maven2")
 
+	parsed, err := url.Parse("https://repo.maven.apache.org/maven2")
+	if err != nil {
+		return err
+	}
+	if err := project.AddRepo(*parsed); err != nil {
+		return err
+	}
+
+	if err := os.MkdirAll("src/main/resources", os.ModePerm); err != nil {
+		return err
+	}
 	return os.MkdirAll(strings.Join([]string{"src/main/java", strings.ReplaceAll(project.groupId, ".", "/"), project.name}, "/"), os.ModePerm)
-}
-
-func addRepo(ctx *cli.Context) error {
-	if !fs.Exists("lyra.json") {
-		return errors.New("no project in current directory")
-	}
-	if ctx.Args().Len() == 0 {
-		return errors.New("no repo provided")
-	}
-	return GetCurrentProject().AddRepo(ctx.Args().First())
 }
 
 func showClasspath(ctx *cli.Context) error {
