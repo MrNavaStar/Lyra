@@ -1,0 +1,12 @@
+{
+    "Artifacts": [
+        {
+            "Name": "lombok",
+            "Group": "org.projectlombok",
+            "Version": "1.18.36",
+            "Main": "https://repo1.maven.org/maven2/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar",
+            "Sources": "https://repo1.maven.org/maven2/org/projectlombok/lombok/1.18.36/lombok-1.18.36-sources.jar",
+            "Docs": "https://repo1.maven.org/maven2/org/projectlombok/lombok/1.18.36/lombok-1.18.36-javadoc.jar"
+        }
+    ]
+}
