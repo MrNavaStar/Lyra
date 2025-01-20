@@ -84,9 +84,8 @@ func mvnParser(slug string) (artifact lyra.Artifact, err error) {
 }
 
 func loadFromMaven(artifact lyra.Artifact) (lyra.Artifact, error) {
-	var repos []url.URL
 	var failed []url.URL
-	for _, repo := range repos {
+	for _, repo := range lyra.GetCurrentProject().Repos() {
 		// Find latest version if it is not present
 		if len(artifact.Version) == 0 {
 			metaData, err := getMeta(repo, artifact)
