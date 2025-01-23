@@ -17,8 +17,8 @@ import (
 )
 
 type Project struct {
-	mu    sync.Mutex
-	group *errgroup.Group
+	mu     sync.Mutex
+	groups map[string]*errgroup.Group
 
 	name      string
 	groupId   string
@@ -74,8 +74,34 @@ func (project *Project) GetClasspath() (classpath []string, err error) {
 	return classpath, nil
 }
 
+func (project *Project) GoWith(id string, f func() error) {
+	group, ok := project.groups[id]
+	if !ok {
+		group, _ = errgroup.WithContext(context.Background())
+		project.groups[id] = group
+	}
+	group.Go(f)
+}
+
 func (project *Project) Go(f func() error) {
-	project.group.Go(f)
+	project.GoWith("", f)
+}
+
+func (project *Project) WaitFor(id string) error {
+	group, ok := project.groups[id]
+	if !ok {
+		return nil
+	}
+	return group.Wait()
+}
+
+func (project *Project) Wait() error {
+	for _, group := range project.groups {
+		if err := group.Wait(); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (project *Project) AddRepo(repo url.URL) error {
@@ -135,7 +161,7 @@ func (project *Project) AddDependency(artifact Artifact) error {
 }
 
 func (project *Project) Load() error {
-	project.group, _ = errgroup.WithContext(context.Background())
+	project.groups = make(map[string]*errgroup.Group)
 	if !fs.Exists("lyra.json") {
 		return nil
 	}
@@ -154,7 +180,7 @@ func (project *Project) Load() error {
 }
 
 func (project *Project) Save() error {
-	if err := project.group.Wait(); err != nil {
+	if err := project.Wait(); err != nil {
 		return err
 	}
 

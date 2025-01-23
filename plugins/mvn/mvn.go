@@ -6,7 +6,6 @@ import (
 	"github.com/mrnavastar/lyra/lyra"
 	"net/http"
 	"net/url"
-	"regexp"
 )
 
 type meta struct {
@@ -34,8 +33,6 @@ type pom struct {
 		} `xml:"dependency"`
 	} `xml:"dependencies"`
 }
-
-var pattern = regexp.MustCompile("([^: ]+):([^: ]+)(:([^: ]*)(:([^: ]+))?)?:([^: ]+)")
 
 func init() {
 	lyra.Dependency.RegisterParser(mvnParser)
@@ -75,15 +72,9 @@ func getPom(repo url.URL, artifact lyra.Artifact) (pomData pom, err error) {
 	return
 }
 
-func mvnParser(slug string) (artifact lyra.Artifact, err error) {
-	groups := pattern.FindStringSubmatch(slug)
-	artifact.Group = groups[1]
-	artifact.Name = groups[2]
-	artifact.Version = groups[7]
-	return loadFromMaven(artifact)
-}
+func mvnParser(slug string) (lyra.Artifact, error) {
+	artifact := lyra.Dependency.ParseMavenCoordinate(slug)
 
-func loadFromMaven(artifact lyra.Artifact) (lyra.Artifact, error) {
 	var failed []url.URL
 	for _, repo := range lyra.GetCurrentProject().Repos() {
 		// Find latest version if it is not present

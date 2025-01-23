@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	lyra.Build.Hooks.PackageClass(func(project *lyra.Project, jar babe.Jar, class *babe.Class) error {
+	lyra.Build.Hooks.PackageClass(func(jar babe.Jar, class *babe.Class) error {
 		if class.HasMainMethod() {
 			if lyra.Build.HasManifestEntry("Main-Class") {
 				return fmt.Errorf("module: %s has too many main method declarations - only one allowed", jar.Name)

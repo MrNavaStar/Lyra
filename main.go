@@ -4,14 +4,16 @@ import (
 	"github.com/mrnavastar/lyra/lyra"
 	"log"
 	"os"
+	"path"
+	"path/filepath"
 )
 
 func main() {
 	if lyra.Java.GetPath() == "" {
 		javaHome := os.Getenv("JAVA_HOME")
 		if javaHome == "" {
-			if link, err := os.Readlink("/usr/bin/java"); err == nil {
-				javaHome = link
+			if link, err := filepath.EvalSymlinks("/usr/bin/java"); err == nil {
+				javaHome = path.Dir(link)
 			}
 		}
 		if javaHome != "" {

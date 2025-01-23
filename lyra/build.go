@@ -13,7 +13,6 @@ import (
 	fss "github.com/mrnavastar/assist/fs"
 	"github.com/mrnavastar/babe/babe"
 	"github.com/urfave/cli/v2"
-	"golang.org/x/sync/errgroup"
 )
 
 func init() {
@@ -67,22 +66,30 @@ func getNewestTime(directory string) (time.Time, error) {
 	return newest, nil
 }
 
+type BuildOptions struct {
+	Jar      bool
+	Fat      bool
+	Sources  bool
+	Minimize bool
+	Docs     bool
+}
+
 func build(ctx *cli.Context) error {
+	return Build.Project(BuildOptions{
+		Jar:      true,
+		Fat:      ctx.Bool("fat"),
+		Sources:  ctx.Bool("sources"),
+		Minimize: ctx.Bool("minimize"),
+		Docs:     ctx.Bool("docs"),
+	})
+}
+
+func (*BuildAPI) Project(options BuildOptions) error {
 	project := GetCurrentProject()
 	for _, hook := range Build.Hooks.preCompile {
-		if err := hook(project); err != nil {
+		if err := hook(); err != nil {
 			return err
 		}
-	}
-
-	// Create Classpath
-	var cp []string
-	for _, artifact := range project.artifacts {
-		artifactPath, err := artifact.Resolve()
-		if err != nil {
-			return err
-		}
-		cp = append(cp, artifactPath)
 	}
 
 	files, err := os.ReadDir("src")
@@ -90,9 +97,13 @@ func build(ctx *cli.Context) error {
 		return err
 	}
 
-	buildGroup, _ := errgroup.WithContext(ctx.Context)
+	classpath, err := project.GetClasspath()
+	if err != nil {
+		return err
+	}
+
 	for _, module := range files {
-		buildGroup.Go(func() error {
+		project.GoWith("lyra:build", func() error {
 			// Create Sourcepath
 			var sources []string
 			if err := filepath.WalkDir(path.Join("src", module.Name(), "java"), func(path string, d fs.DirEntry, err error) error {
@@ -116,11 +127,6 @@ func build(ctx *cli.Context) error {
 					return err
 				}
 
-				classpath, err := project.GetClasspath()
-				if err != nil {
-					return err
-				}
-
 				if err := Java.Compile(JavaCompileOptions{
 					Classpath: classpath,
 					Sources:   sources,
@@ -130,24 +136,24 @@ func build(ctx *cli.Context) error {
 				outputTime = time.Now()
 			}
 
-			buildGroup.Go(func() error {
-				return Package(module.Name(), outputTime, ctx.Bool("fat"))
-			})
+			if options.Jar {
+				project.GoWith("lyra:build", func() error {
+					return Package(module.Name(), outputTime, options.Fat)
+				})
+			}
 
-			if ctx.Bool("sources") {
-				buildGroup.Go(func() error {
+			if options.Sources {
+				project.GoWith("lyra:build", func() error {
 					return PackageSources(module.Name(), outputTime)
 				})
 			}
 			return nil
 		})
 	}
-
-	return buildGroup.Wait()
+	return project.WaitFor("lyra:build")
 }
 
 func Package(name string, outputTime time.Time, fat bool) error {
-	project := GetCurrentProject()
 	filename := path.Join("build/jar", name+".jar")
 	resources := path.Join("src", name, "resources")
 	resourceTime, _ := getNewestTime(resources)
@@ -160,7 +166,7 @@ func Package(name string, outputTime time.Time, fat bool) error {
 
 	jar := babe.CreateJar(filename)
 	for _, hook := range Build.Hooks.prePackageJar {
-		if err := hook(project, jar); err != nil {
+		if err := hook(jar); err != nil {
 			return err
 		}
 	}
@@ -208,7 +214,7 @@ func Package(name string, outputTime time.Time, fat bool) error {
 					}
 
 					for _, hook := range Build.Hooks.packageClass {
-						err := hook(project, *jar, &class)
+						err := hook(*jar, &class)
 						if err != nil {
 							return err
 						}

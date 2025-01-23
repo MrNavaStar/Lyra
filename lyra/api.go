@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
 	"sync"
 )
 
@@ -136,6 +137,7 @@ type DependencyAPI struct {
 	resolvers     map[string]func(uri *url.URL) (string, error)
 }
 
+var mavenPattern = regexp.MustCompile("([^: ]+):([^: ]+)(:([^: ]*)(:([^: ]+))?)?:([^: ]+)")
 var Dependency DependencyAPI
 
 func (*DependencyAPI) RegisterRepoAcceptor(acceptor func(uri url.URL) bool) {
@@ -157,12 +159,23 @@ func (*DependencyAPI) RegisterResolver(scheme string, resolver func(uri *url.URL
 	Dependency.resolvers[scheme] = resolver
 }
 
+func (*DependencyAPI) ParseMavenCoordinate(coordinate string) (artifact Artifact) {
+	groups := mavenPattern.FindStringSubmatch(coordinate)
+	artifact.Name = groups[2]
+	artifact.Group = groups[1]
+
+	if len(groups) == 8 {
+		artifact.Version = groups[7]
+	}
+	return artifact
+}
+
 //----- [BuildAPI] -----------------------------------------------------------------------------------------------------
 
 type BuildHooks struct {
-	preCompile    []func(*Project) error
-	prePackageJar []func(*Project, babe.Jar) error
-	packageClass  []func(*Project, babe.Jar, *babe.Class) error
+	preCompile    []func() error
+	prePackageJar []func(babe.Jar) error
+	packageClass  []func(babe.Jar, *babe.Class) error
 }
 
 type BuildAPI struct {
@@ -194,19 +207,19 @@ func (*BuildAPI) HasManifestEntry(field string) bool {
 	return ok
 }
 
-func (BuildHooks) PreCompile(hook func(*Project) error) {
+func (BuildHooks) PreCompile(hook func() error) {
 	Build.mu.Lock()
 	defer Build.mu.Unlock()
 	Build.Hooks.preCompile = append(Build.Hooks.preCompile, hook)
 }
 
-func (BuildHooks) PrePackageJar(hook func(*Project, babe.Jar) error) {
+func (BuildHooks) PrePackageJar(hook func(babe.Jar) error) {
 	Build.mu.Lock()
 	defer Build.mu.Unlock()
 	Build.Hooks.prePackageJar = append(Build.Hooks.prePackageJar, hook)
 }
 
-func (BuildHooks) PackageClass(hook func(*Project, babe.Jar, *babe.Class) error) {
+func (BuildHooks) PackageClass(hook func(babe.Jar, *babe.Class) error) {
 	Build.mu.Lock()
 	defer Build.mu.Unlock()
 	Build.Hooks.packageClass = append(Build.Hooks.packageClass, hook)
