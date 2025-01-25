@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"runtime"
 	"strings"
 )
 
@@ -26,8 +27,15 @@ func javaInfo(ctx *cli.Context) error {
 	return nil
 }
 
+func getExtension() string {
+	if strings.HasPrefix(runtime.GOOS, "windows") {
+		return ".exe"
+	}
+	return ""
+}
+
 func (*JavaAPI) IsInstalled() bool {
-	return fs.Exists(path.Join(Java.GetPath(), "java")) && fs.Exists(path.Join(Java.GetPath(), "javac"))
+	return fs.Exists(path.Join(Java.GetPath(), "java"+getExtension())) && fs.Exists(path.Join(Java.GetPath(), "javac"+getExtension()))
 }
 
 type JavaCompileOptions struct {
@@ -36,7 +44,7 @@ type JavaCompileOptions struct {
 }
 
 func (*JavaAPI) Compile(options JavaCompileOptions) error {
-	cmd := exec.Command(path.Join(Java.GetPath(), "javac"),
+	cmd := exec.Command(path.Join(Java.GetPath(), "javac"+getExtension()),
 		"-d", "build/output",
 		"-cp", strings.Join(options.Classpath, string(os.PathListSeparator)),
 		"-encoding", "utf8",
@@ -56,7 +64,7 @@ type JavaRunOptions struct {
 }
 
 func (*JavaAPI) Run(options JavaRunOptions) error {
-	cmd := exec.Command(path.Join(Java.GetPath(), "java"))
+	cmd := exec.Command(path.Join(Java.GetPath(), "java"+getExtension()))
 	if len(options.Classpath) > 0 {
 		cmd.Args = append(cmd.Args, "-cp", strings.Join(options.Classpath, string(os.PathListSeparator)))
 	}
