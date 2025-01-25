@@ -35,9 +35,6 @@ func getExtension() string {
 }
 
 func (*JavaAPI) IsInstalled() bool {
-	println(path.Join(Java.GetPath(), "java"+getExtension()))
-	println(path.Join(Java.GetPath(), "javac"+getExtension()))
-
 	return fs.Exists(path.Join(Java.GetPath(), "java"+getExtension())) && fs.Exists(path.Join(Java.GetPath(), "javac"+getExtension()))
 }
 
