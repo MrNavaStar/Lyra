@@ -93,6 +93,9 @@ func (*JavaAPI) SetPath(javaPath string) error {
 	if Java.java != "" {
 		return errors.New("java path has already been set by another plugin")
 	}
+	if path.Base(javaPath) != "bin" {
+		javaPath = path.Join(javaPath, "bin")
+	}
 	Java.java = path.Clean(javaPath)
 	return nil
 }
